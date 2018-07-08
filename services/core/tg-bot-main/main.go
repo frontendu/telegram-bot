@@ -1,12 +1,17 @@
 package main
 
 import (
-	"time"
 	"errors"
 
 	"gopkg.in/telegram-bot-api.v4"
+
 	"github.com/frontendu/telegram-bot/services/core/internal/postgres"
 	log "github.com/frontendu/telegram-bot/services/core/pkg/logger"
+	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/api"
+	"os"
+	"os/signal"
+	"context"
+	"time"
 )
 
 func main() {
@@ -19,22 +24,34 @@ func main() {
 	logger := log.GetLogrus(props)
 	logger.Info("Starting...")
 
-	pgConfig := postgres.Config{
-		MaxConnLifetime: time.Duration(cfg.DBMaxConnLifetime),
-		MaxOpenConns:    cfg.DBMaxConnections,
-		MaxIdleConns:    cfg.DBMaxIdleConns,
-	}
+	//pgConfig := postgres.Config{
+	//	MaxConnLifetime: time.Duration(cfg.DBMaxConnLifetime),
+	//	MaxOpenConns:    cfg.DBMaxConnections,
+	//	MaxIdleConns:    cfg.DBMaxIdleConns,
+	//}
+	//
+	//db, err := initPostgres(cfg.DBUrl, logger, pgConfig)
+	//if err != nil {
+	//	panic("Cannot connect to database: " + err.Error())
+	//}
+	//defer db.Close()
+	//runTelegram(logger)
 
-	db, err := initPostgres(cfg.DBUrl, logger, pgConfig)
-	if err != nil {
-		panic("Cannot connect to database: " + err.Error())
-	}
-	defer db.Close()
+	stopHttp := make(chan os.Signal, 1)
+	signal.Notify(stopHttp, os.Interrupt)
+	httpManager := api.NewHttpManager(logger, cfg.ListenAddr)
+	go func() {
+		if err := httpManager.Serve(); err != nil {
+			logger.Fatalln("Failed to serve:", err)
+		}
+	}()
 
-	initTelegram(logger)
+	<-stopHttp
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	httpManager.Shutdown(ctx)
 }
 
-func initTelegram(logger log.Logger) {
+func runTelegram(logger log.Logger) {
 	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken")
 	if err != nil {
 		logger.Panic(err)

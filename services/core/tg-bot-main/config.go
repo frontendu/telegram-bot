@@ -29,7 +29,7 @@ func ParseFlags() СliFlags {
 	flag.StringVar(&cfg.Log.Level, "log-level", "info", "Log level debug|info|warning|error|fatal|panic.")
 	flag.StringVar(&cfg.Log.Format, "log-format", "text", "Log format text|json.")
 
-	flag.StringVar(&cfg.ListenAddr, "listen-address", ":8080", "The address to listen on for HTTP requests.")
+	flag.StringVar(&cfg.ListenAddr, "listen-address", ":6661", "The address to listen on for HTTP requests.")
 
 	flag.StringVar(&cfg.Logfile, "logfile", "tg-bot-main.log", "Logfile name")
 

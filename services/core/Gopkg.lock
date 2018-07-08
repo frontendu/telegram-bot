@@ -9,9 +9,12 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/google/uuid"
-  packages = ["."]
-  revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
+  name = "github.com/frontendu/telegram-bot"
+  packages = [
+    "services/core/internal/postgres",
+    "services/core/pkg/logger"
+  ]
+  revision = "bcdb46b5be381ff5ac05c5a756eed6baa501d320"
 
 [[projects]]
   branch = "master"
@@ -58,6 +61,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dedfe804618199e6b2ed1c42f160024d38a9d03351bd0ceb9329cd7e775d673f"
+  inputs-digest = "54beb2ea1bef5c14a54e236d6fc3e148c7082f58c11281bbb3d683704b4f3e4f"
   solver-name = "gps-cdcl"
   solver-version = 1
