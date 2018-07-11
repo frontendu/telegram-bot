@@ -24,8 +24,12 @@ function main() {
     // Регистрация бота
     let client = new registry_chema.Registry('localhost:6661',
         grpc.credentials.createInsecure());
-    client.Register({command: "/ping"}, (err, response) => {
-        console.log('Got response:', response.message);
+    client.Register({command: "ping"}, (err, response) => {
+        if (err != null) {
+            console.log('Error! ' + err.details);
+        } else {
+            console.log('Got response:', response.message);
+        }
     });
 }
 

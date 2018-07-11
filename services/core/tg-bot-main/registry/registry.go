@@ -9,20 +9,33 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"log"
+	"github.com/pkg/errors"
 )
 
 type Registry struct {
-	logger     logger.Logger
-	listenAddr string
+	subscribers map[string]*grpc.ClientConn
+	logger      logger.Logger
+	listenAddr  string
 }
 
 func NewRegistry(logger logger.Logger, listenAddr string) *Registry {
 	r := &Registry{
-		logger:     logger,
-		listenAddr: listenAddr,
+		subscribers: make(map[string]*grpc.ClientConn),
+		logger:      logger,
+		listenAddr:  listenAddr,
 	}
 
 	return r
+}
+
+func (r *Registry) Add(command string) error {
+	if _, ok := r.subscribers[command]; !ok {
+		r.subscribers[command] = nil
+	} else {
+		return errors.New("command " + command + " is already taken")
+	}
+
+	return nil
 }
 
 func (r *Registry) Serve() {
@@ -31,7 +44,9 @@ func (r *Registry) Serve() {
 		r.logger.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	proto.RegisterRegistryServer(s, &registry{})
+	proto.RegisterRegistryServer(s, &registry{
+		Registry: r,
+	})
 	reflection.Register(s)
 	r.logger.Infoln("Serving registry...")
 	if err := s.Serve(listener); err != nil {
@@ -39,8 +54,22 @@ func (r *Registry) Serve() {
 	}
 }
 
-type registry struct{}
+type registry struct {
+	*Registry
+}
 
 func (r *registry) Register(ctx context.Context, in *proto.RegisterRequest) (*proto.RegisterResponse, error) {
-	return &proto.RegisterResponse{Message: "hello from core", Status: true}, nil
+	var res *proto.RegisterResponse
+	//@TODO(Kirill) Check command
+	if _, ok := r.subscribers[in.Command]; !ok {
+		res = &proto.RegisterResponse{
+			Message: "Command registered",
+			Status:  true,
+		}
+	}
+
+	//st := status.New(codes.Aborted, "Command is already taken")
+	//return nil, st.Err()
+
+	return res, nil
 }
