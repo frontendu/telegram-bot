@@ -13,7 +13,8 @@ type СliFlags struct {
 		Level  string
 	}
 
-	Logfile string
+	Logfile  string
+	TgBotKey string
 
 	DBUrl             string
 	DBMaxConnLifetime int
@@ -31,6 +32,7 @@ func ParseFlags() СliFlags {
 
 	flag.StringVar(&cfg.ListenAddr, "listen-address", ":6661", "The address to listen on for HTTP requests.")
 
+	flag.StringVar(&cfg.TgBotKey, "tg-key", "", "Telegram bot api key")
 	flag.StringVar(&cfg.Logfile, "logfile", "tg-bot-main.log", "Logfile name")
 
 	flag.StringVar(&cfg.DBUrl, "dbUrl", "", "db connection string")
@@ -40,7 +42,7 @@ func ParseFlags() СliFlags {
 
 	flag.IntVar(&cfg.HttpApiVersion, "httpApiVersion", 1, "version of http api")
 
-	flagenv.Prefix = "tg_bot_main"
+	flagenv.Prefix = "frontendu_"
 	flagenv.Parse()
 	flag.Parse()
 

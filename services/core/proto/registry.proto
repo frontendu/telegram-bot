@@ -1,0 +1,16 @@
+syntax = "proto3";
+package proto;
+
+service Registry {
+    rpc Register (RegisterRequest) returns (RegisterResponse) {
+    }
+}
+
+message RegisterRequest {
+    string command = 1;
+}
+
+message RegisterResponse {
+    string message = 1;
+    bool status = 2;
+}

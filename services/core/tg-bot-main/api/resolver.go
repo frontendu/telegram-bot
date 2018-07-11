@@ -1,34 +1,20 @@
 package api
 
 import (
-	"net/http"
-	"fmt"
-	"path"
+	"google.golang.org/grpc"
+	"github.com/pkg/errors"
 )
 
-type pathResolver struct {
-	handlers map[string]http.HandlerFunc
+type Resolver struct {
+	table map[string]*grpc.ClientConn
 }
 
-func newPathResolver() *pathResolver {
-	return &pathResolver{
-		handlers: make(map[string]http.HandlerFunc),
+func (r *Resolver) Add(command string) error {
+	if _, ok := r.table[command]; !ok {
+		r.table[command] = nil
+ 	} else {
+ 		return errors.New("command " + command + " is already taken")
 	}
-}
 
-func (p *pathResolver) Add(path string, handler http.HandlerFunc) {
-	p.handlers[path] = handler
-}
-
-func (p *pathResolver) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	check := fmt.Sprintf("%s %s", req.Method, req.URL.Path)
-	for pattern, handlerFunc := range p.handlers {
-		if ok, err := path.Match(pattern, check); ok && err == nil {
-			handlerFunc(res, req)
-			return
-		} else if err != nil {
-			fmt.Fprint(res, err)
-		}
-	}
-	http.NotFound(res, req)
+	return nil
 }

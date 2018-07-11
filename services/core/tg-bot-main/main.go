@@ -1,17 +1,13 @@
 package main
 
 import (
-	"errors"
-
 	"gopkg.in/telegram-bot-api.v4"
 
-	"github.com/frontendu/telegram-bot/services/core/internal/postgres"
 	log "github.com/frontendu/telegram-bot/services/core/pkg/logger"
-	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/api"
 	"os"
 	"os/signal"
-	"context"
 	"time"
+	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
 )
 
 func main() {
@@ -24,35 +20,19 @@ func main() {
 	logger := log.GetLogrus(props)
 	logger.Info("Starting...")
 
-	//pgConfig := postgres.Config{
-	//	MaxConnLifetime: time.Duration(cfg.DBMaxConnLifetime),
-	//	MaxOpenConns:    cfg.DBMaxConnections,
-	//	MaxIdleConns:    cfg.DBMaxIdleConns,
-	//}
-	//
-	//db, err := initPostgres(cfg.DBUrl, logger, pgConfig)
-	//if err != nil {
-	//	panic("Cannot connect to database: " + err.Error())
-	//}
-	//defer db.Close()
-	//runTelegram(logger)
+	go runTelegram(cfg.TgBotKey, logger)
 
 	stopHttp := make(chan os.Signal, 1)
 	signal.Notify(stopHttp, os.Interrupt)
-	httpManager := api.NewHttpManager(logger, cfg.ListenAddr)
-	go func() {
-		if err := httpManager.Serve(); err != nil {
-			logger.Fatalln("Failed to serve:", err)
-		}
-	}()
 
-	<-stopHttp
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
-	httpManager.Shutdown(ctx)
+	//streamer := api.NewgRPCStreamer(logger)
+	go registry.NewRegistry(logger, cfg.ListenAddr).Serve()
+
+	time.Sleep(time.Second * 99999999)
 }
 
-func runTelegram(logger log.Logger) {
-	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken")
+func runTelegram(key string, logger log.Logger) {
+	bot, err := tgbotapi.NewBotAPI(key)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -67,28 +47,24 @@ func runTelegram(logger log.Logger) {
 	updates, err := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message == nil {
+		msg := update.Message
+		if msg == nil {
 			continue
 		}
 
-		logger.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		msg.ReplyToMessageID = update.Message.MessageID
-
-		bot.Send(msg)
+		if msg.IsCommand() {
+			logger.Debugf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+			command := msg.Command()
+			switch command {
+			case "ping":
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")
+				msg.ReplyToMessageID = update.Message.MessageID
+				bot.Send(msg)
+			default:
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Неизвестная команда")
+				msg.ReplyToMessageID = update.Message.MessageID
+				bot.Send(msg)
+			}
+		}
 	}
-}
-
-func initPostgres(url string, logger log.Logger, config postgres.Config) (*postgres.DB, error) {
-	db, err := postgres.New(url, logger, config)
-	if err != nil {
-		return nil, errors.New("couldn't open postgres")
-	}
-
-	if err := db.Connect(); err != nil {
-		return nil, errors.New("couldn't connect to postgres")
-	}
-
-	return db, err
 }

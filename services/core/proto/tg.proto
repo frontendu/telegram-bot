@@ -1,0 +1,67 @@
+syntax = "proto3";
+package proto;
+
+service Commands {
+    rpc Command (TgUpdate) returns (Response) {
+    }
+}
+
+message Response {
+    bool status = 1;
+}
+
+message TgUpdate {
+    uint64 UpdateID = 1;
+    TgMessage Message = 2;
+}
+
+message TgMessage {
+    uint64 messageID = 1;
+    TgFrom From = 2;
+    uint64 Date = 3;
+    TgChat Chat = 4;
+    TgUser ForwardedFrom = 5;
+    TgChat ForwardedFromChat = 6;
+    int64 ForwardedFromMessageID = 7;
+    uint64 ForwardDate = 8;
+    TgMessage ReplyToMessage = 9;
+    uint64 EditDate = 10;
+    string Text = 11;
+    // next will be Entities
+}
+
+message TgFrom {
+    uint64 ID = 1;
+    string FristName = 2;
+    string LastName = 3;
+    string UserName = 4;
+    string LanguageCode = 5;
+    bool isBot = 6;
+}
+
+message TgChat {
+    int64 ID = 1;
+    string Type = 2;
+    string Title = 3;
+    string UserName = 4;
+    string FirstName = 5;
+    string LastName = 6;
+    bool AllMembersAreAdmins = 7;
+    TgChatPhoto Photo = 8;
+    string Description = 9;
+    string InviteLink = 10;
+}
+
+message TgChatPhoto {
+    string SmallFileID = 1;
+    string BigFileID = 2;
+}
+
+message TgUser {
+    int64 ID = 1;
+    string FirstName = 2;
+    string LastName = 3;
+    string UserName = 4;
+    string LanguageCode = 5;
+    bool IsBot = 6;
+}
