@@ -21,12 +21,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -91,7 +85,10 @@
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
+  packages = [
+    "googleapis/rpc/errdetails",
+    "googleapis/rpc/status"
+  ]
   revision = "e92b116572682a5b432ddd840aeaba2a559eeff1"
 
 [[projects]]
@@ -137,6 +134,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb981c690b4a342836a6cd5cee158fa7e7683b1d2ff1c8ce65b1e974a07bbff9"
+  inputs-digest = "c8f034e80eeefbc1feab6f1ad992790e48c15e2756885b99e3dbd5847fdb9eaa"
   solver-name = "gps-cdcl"
   solver-version = 1

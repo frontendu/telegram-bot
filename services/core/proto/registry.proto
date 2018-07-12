@@ -7,7 +7,9 @@ service Registry {
 }
 
 message RegisterRequest {
-    string command = 1;
+    string botName = 1;
+    string command = 2;
+    string listenAddr = 3;
 }
 
 message RegisterResponse {

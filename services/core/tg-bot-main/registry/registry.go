@@ -8,34 +8,34 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	epb "google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"log"
-	"github.com/pkg/errors"
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 )
 
 type Registry struct {
-	subscribers map[string]*grpc.ClientConn
+	subscribers map[string]*subscriberMeta
 	logger      logger.Logger
 	listenAddr  string
 }
 
+type subscriberMeta struct {
+	conn    *grpc.ClientConn
+	addr    *net.TCPAddr
+	name    string
+	command string
+}
+
 func NewRegistry(logger logger.Logger, listenAddr string) *Registry {
 	r := &Registry{
-		subscribers: make(map[string]*grpc.ClientConn),
+		subscribers: make(map[string]*subscriberMeta),
 		logger:      logger,
 		listenAddr:  listenAddr,
 	}
 
 	return r
-}
-
-func (r *Registry) Add(command string) error {
-	if _, ok := r.subscribers[command]; !ok {
-		r.subscribers[command] = nil
-	} else {
-		return errors.New("command " + command + " is already taken")
-	}
-
-	return nil
 }
 
 func (r *Registry) Serve() {
@@ -58,18 +58,50 @@ type registry struct {
 	*Registry
 }
 
+//@TODO(Kirill) Check command for valid
 func (r *registry) Register(ctx context.Context, in *proto.RegisterRequest) (*proto.RegisterResponse, error) {
 	var res *proto.RegisterResponse
-	//@TODO(Kirill) Check command
+
+	clientServerAddr, err := validateIp(in.ListenAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	if _, ok := r.subscribers[in.Command]; !ok {
+		r.subscribers[in.Command] = &subscriberMeta{
+			addr:    clientServerAddr,
+			name:    in.BotName,
+			command: in.Command,
+		}
 		res = &proto.RegisterResponse{
 			Message: "Command registered",
 			Status:  true,
 		}
+	} else {
+		return nil, status.New(codes.Aborted, "Command is already taken").Err()
 	}
 
-	//st := status.New(codes.Aborted, "Command is already taken")
-	//return nil, st.Err()
-
 	return res, nil
+}
+
+// Resolve tcp addr and send error, if something happened
+func validateIp(addr string) (*net.TCPAddr, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		st := status.New(codes.Aborted, "cannot parse server address")
+		ds, err := st.WithDetails(
+			&epb.QuotaFailure{
+				Violations: []*epb.QuotaFailure_Violation{{
+					Subject:     addr,
+					Description: "Bad ip address",
+				}},
+			},
+		)
+		if err != nil {
+			return nil, st.Err()
+		}
+		return nil, ds.Err()
+	}
+
+	return tcpAddr, nil
 }
