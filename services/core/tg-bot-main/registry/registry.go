@@ -13,6 +13,9 @@ import (
 	"log"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/codes"
+	"regexp"
+	"errors"
+	"fmt"
 )
 
 type Registry struct {
@@ -58,9 +61,13 @@ type registry struct {
 	*Registry
 }
 
-//@TODO(Kirill) Check command for valid
 func (r *registry) Register(ctx context.Context, in *proto.RegisterRequest) (*proto.RegisterResponse, error) {
 	var res *proto.RegisterResponse
+
+	regExpCommand := regexp.MustCompile("^[a-zA-Z0-9_.-]*$")
+	if !regExpCommand.MatchString(in.Command) {
+		return nil, errors.New("invalid command: " + in.Command)
+	}
 
 	clientServerAddr, err := validateIp(in.ListenAddr)
 	if err != nil {
@@ -81,6 +88,7 @@ func (r *registry) Register(ctx context.Context, in *proto.RegisterRequest) (*pr
 		return nil, status.New(codes.Aborted, "Command is already taken").Err()
 	}
 
+	r.logger.Infoln(fmt.Sprintf("Command %s registred by %s bot", in.Command, in.BotName))
 	return res, nil
 }
 
