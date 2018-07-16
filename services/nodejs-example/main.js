@@ -2,7 +2,7 @@ let PROTO_REG_PATH = '../core/proto/registry.proto';
 let PROTO_COMMANDS_PATH = '../core/proto/tg.proto';
 let grpc = require('grpc');
 let registryChema = grpc.load(PROTO_REG_PATH).proto;
-// let commandsChema = grpc.load(PROTO_COMMANDS_PATH).proto;
+let commandsChema = grpc.load(PROTO_COMMANDS_PATH).proto;
 
 function register() {
     // Bot registration
@@ -18,18 +18,23 @@ function register() {
     });
 }
 
-// function startListenCommand() {
-//     let server = new grpc.Server();
-//     server.addService(commandsChema.Command.service, {command: pingCommand});
-//     server.bind('0.0.0.0:55051', grpc.ServerCredentials.createInsecure());
-//     server.start();
-// }
-//
-// function pingCommand(call, callback) {
-//     callback(null, {
-//         message: 'Pong! From JS bot service 🤓'
-//     })
-// }
+// unknown service
+function startListenCommand() {
+    let addr = "0.0.0.0:55051";
+    console.log("starting server at " + addr);
+    let server = new grpc.Server();
+    server.addService(commandsChema.Commands.service, {command: command});
+    server.bind(addr, grpc.ServerCredentials.createInsecure());
+    server.start();
+}
+
+// Commands
+function command(call, callback) {
+    callback(null, {
+        // message: 'Pong! From JS bot service 🤓'
+        status: true,
+    })
+}
 
 register();
-// startListenCommand();
+startListenCommand();

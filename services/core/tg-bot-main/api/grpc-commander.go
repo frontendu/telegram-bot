@@ -10,11 +10,17 @@ type gRPCSCommander struct {
 	logger   logger.Logger
 }
 
-func NewgRPCSCommander(registry *registry.Registry, logger logger.Logger) *gRPCSCommander {
+func NewRPCSCommander(registry *registry.Registry, logger logger.Logger) *gRPCSCommander {
 	g := &gRPCSCommander{
 		registry: registry,
 		logger:   logger,
 	}
 
 	return g
+}
+
+func (g *gRPCSCommander) Command(command string) error {
+
+
+	return nil
 }

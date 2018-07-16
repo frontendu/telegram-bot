@@ -7,6 +7,6 @@ const (
 	core = "core"
 )
 
-type Client interface {
-	SendCommand(command string) error
+type Commander interface {
+	Command(command string) error
 }

@@ -4,10 +4,9 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 
 	log "github.com/frontendu/telegram-bot/services/core/pkg/logger"
-	"os"
-	"os/signal"
 	"time"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
+	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/api"
 )
 
 func main() {
@@ -20,18 +19,15 @@ func main() {
 	logger := log.GetLogrus(props)
 	logger.Info("Starting...")
 
-	go runTelegram(cfg.TgBotKey, logger)
-
-	stopHttp := make(chan os.Signal, 1)
-	signal.Notify(stopHttp, os.Interrupt)
-
-	//streamer := api.NewgRPCStreamer(logger)
-	go registry.NewRegistry(logger, cfg.ListenAddr).Serve()
+	r := registry.NewRegistry(logger, cfg.ListenAddr)
+	go r.Serve()
+	c := api.NewRPCSCommander(r, logger)
+	go runTelegram(cfg.TgBotKey, logger, c, r)
 
 	time.Sleep(time.Second * 99999999)
 }
 
-func runTelegram(key string, logger log.Logger) {
+func runTelegram(key string, logger log.Logger, commander api.Commander, registry *registry.Registry) {
 	bot, err := tgbotapi.NewBotAPI(key)
 	if err != nil {
 		logger.Panic(err)
@@ -55,16 +51,19 @@ func runTelegram(key string, logger log.Logger) {
 		if msg.IsCommand() {
 			logger.Debugf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 			command := msg.Command()
-			switch command {
-			case "ping":
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")
-				msg.ReplyToMessageID = update.Message.MessageID
-				bot.Send(msg)
-			default:
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Неизвестная команда")
-				msg.ReplyToMessageID = update.Message.MessageID
-				bot.Send(msg)
+			if err := registry.Process(command, &update); err != nil {
+				logger.Warn(err)
 			}
+			//switch command {
+			//case "ping":
+			//	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")
+			//	msg.ReplyToMessageID = update.Message.MessageID
+			//	bot.Send(msg)
+			//default:
+			//	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Неизвестная команда")
+			//	msg.ReplyToMessageID = update.Message.MessageID
+			//	bot.Send(msg)
+			//}
 		}
 	}
 }

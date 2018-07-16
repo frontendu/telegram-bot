@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"errors"
 	"fmt"
+	"gopkg.in/telegram-bot-api.v4"
+	"time"
 )
 
 type Registry struct {
@@ -50,6 +52,7 @@ func (r *Registry) Serve() {
 	proto.RegisterRegistryServer(s, &registry{
 		Registry: r,
 	})
+	proto.RegisterCommandsServer(s, &commands{})
 	reflection.Register(s)
 	r.logger.Infoln("Serving registry...")
 	if err := s.Serve(listener); err != nil {
@@ -57,8 +60,48 @@ func (r *Registry) Serve() {
 	}
 }
 
+func (r *Registry) Process(command string, payload *tgbotapi.Update) error {
+	if _, ok := r.subscribers[command]; ok {
+		// Send payload to server
+		// пинговать сервис, если не отвечает освобождать команду
+		conn, err := grpc.Dial(r.listenAddr, grpc.WithInsecure())
+		if err != nil {
+			return errors.New("didn't connect: " + err.Error())
+		}
+		defer func() {
+			if e := conn.Close(); e != nil {
+				r.logger.Warnf("failed to close connection: %s", e)
+			}
+		}()
+
+		c := proto.NewCommandsClient(conn)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
+		defer cancelFunc()
+		res, err := c.Command(ctx, &proto.TgUpdate{
+			UpdateID: int32(payload.UpdateID),
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(res)
+
+		return nil
+	}
+
+	return errors.New("unregistered command: " + command)
+}
+
 type registry struct {
 	*Registry
+}
+
+type commands struct {
+
+}
+
+func (c *commands) Command(ctx context.Context, in *proto.TgUpdate) (*proto.Response, error) {
+	return &proto.Response{Status: true}, nil
 }
 
 func (r *registry) Register(ctx context.Context, in *proto.RegisterRequest) (*proto.RegisterResponse, error) {
