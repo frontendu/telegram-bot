@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
 	"time"
+	"github.com/jinzhu/copier"
 )
 
 type Registry struct {
@@ -60,11 +61,12 @@ func (r *Registry) Serve() {
 	}
 }
 
-func (r *Registry) Process(command string, payload *tgbotapi.Update) error {
+func (r *Registry) Process(command string, bot *tgbotapi.BotAPI, payload *tgbotapi.Update) error {
+	var tgUpdate proto.TgUpdate
 	if _, ok := r.subscribers[command]; ok {
 		// Send payload to server
-		// пинговать сервис, если не отвечает освобождать команду
-		conn, err := grpc.Dial(r.listenAddr, grpc.WithInsecure())
+		// Пинговать сервис, если не отвечает освобождать команду
+		conn, err := grpc.Dial(r.subscribers[command].addr.String(), grpc.WithInsecure())
 		if err != nil {
 			return errors.New("didn't connect: " + err.Error())
 		}
@@ -77,14 +79,20 @@ func (r *Registry) Process(command string, payload *tgbotapi.Update) error {
 		c := proto.NewCommandsClient(conn)
 		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
 		defer cancelFunc()
-		res, err := c.Command(ctx, &proto.TgUpdate{
-			UpdateID: int32(payload.UpdateID),
-		})
+
+		copier.Copy(&tgUpdate, payload)
+		res, err := c.Command(ctx, &tgUpdate)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println(res)
+		if !res.Status {
+			return errors.New("got error from backend")
+		}
+
+		msg := tgbotapi.NewMessage(payload.Message.Chat.ID, "pong")
+		msg.ReplyToMessageID = payload.Message.MessageID
+		bot.Send(msg)
 
 		return nil
 	}
@@ -96,9 +104,7 @@ type registry struct {
 	*Registry
 }
 
-type commands struct {
-
-}
+type commands struct{}
 
 func (c *commands) Command(ctx context.Context, in *proto.TgUpdate) (*proto.Response, error) {
 	return &proto.Response{Status: true}, nil

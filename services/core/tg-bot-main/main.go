@@ -6,7 +6,6 @@ import (
 	log "github.com/frontendu/telegram-bot/services/core/pkg/logger"
 	"time"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
-	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/api"
 )
 
 func main() {
@@ -21,13 +20,12 @@ func main() {
 
 	r := registry.NewRegistry(logger, cfg.ListenAddr)
 	go r.Serve()
-	c := api.NewRPCSCommander(r, logger)
-	go runTelegram(cfg.TgBotKey, logger, c, r)
+	go runTelegram(cfg.TgBotKey, logger, r)
 
 	time.Sleep(time.Second * 99999999)
 }
 
-func runTelegram(key string, logger log.Logger, commander api.Commander, registry *registry.Registry) {
+func runTelegram(key string, logger log.Logger, registry *registry.Registry) {
 	bot, err := tgbotapi.NewBotAPI(key)
 	if err != nil {
 		logger.Panic(err)
@@ -51,19 +49,9 @@ func runTelegram(key string, logger log.Logger, commander api.Commander, registr
 		if msg.IsCommand() {
 			logger.Debugf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 			command := msg.Command()
-			if err := registry.Process(command, &update); err != nil {
+			if err := registry.Process(command, bot, &update); err != nil {
 				logger.Warn(err)
 			}
-			//switch command {
-			//case "ping":
-			//	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")
-			//	msg.ReplyToMessageID = update.Message.MessageID
-			//	bot.Send(msg)
-			//default:
-			//	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Неизвестная команда")
-			//	msg.ReplyToMessageID = update.Message.MessageID
-			//	bot.Send(msg)
-			//}
 		}
 	}
 }

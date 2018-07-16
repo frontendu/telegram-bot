@@ -21,6 +21,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/copier"
+  packages = ["."]
+  revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -134,6 +140,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c8f034e80eeefbc1feab6f1ad992790e48c15e2756885b99e3dbd5847fdb9eaa"
+  inputs-digest = "16144f3bb759bc6579fb321dec2c0457a0a73c0d89e75024dc0ad2de12fc1d93"
   solver-name = "gps-cdcl"
   solver-version = 1
