@@ -1,7 +1,7 @@
 syntax = "proto3";
 package proto;
 
-service Registry {
+service Response {
     rpc Register (RegisterRequest) returns (RegisterResponse) {
     }
 }
@@ -16,3 +16,4 @@ message RegisterResponse {
     string message = 1;
     bool status = 2;
 }
+

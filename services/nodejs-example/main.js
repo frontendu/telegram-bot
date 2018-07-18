@@ -1,6 +1,6 @@
 let grpc = require('grpc');
 
-let PROTO_REG_PATH = '../core/proto/registry.proto';
+let PROTO_REG_PATH = '../core/proto/response.proto';
 let PROTO_COMMANDS_PATH = '../core/proto/tg.proto';
 
 let registryChema = grpc.load(PROTO_REG_PATH).proto;
@@ -11,7 +11,7 @@ let client = new registryChema.Registry('localhost:6661', grpc.credentials.creat
 
 function register() {
     // Register is a name of the command
-    client.Register({botName: "pinger", listenAddr: '0.0.0.0:55051', command: "ping"}, (err, response) => {
+    client.Response({botName: "pinger", listenAddr: '0.0.0.0:55051', command: "ping"}, (err, response) => {
         if (err != null) {
             console.log('Error! ' + err.details);
         } else {
@@ -33,16 +33,13 @@ function startListenCommand() {
 // Commands
 function commandResponse(call, callback) {
     let allOk = true;
+    let status;
     console.log("Got command from " + call.request.Message.From.FirstName);
-    if (allOk) {
-        callback(null, {
-            status: true,
-        })
-    } else {
-        callback(null, {
-            status: false,
-        })
-    }
+    status = allOk ? true : false;
+
+    callback(null, {
+        status: status,
+    })
 }
 
 register();
