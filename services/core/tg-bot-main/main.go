@@ -4,9 +4,12 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 
 	log "github.com/frontendu/telegram-bot/services/core/pkg/logger"
-	"time"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/api"
+	"os"
+	"os/signal"
+	"context"
+	"time"
 )
 
 func main() {
@@ -19,6 +22,9 @@ func main() {
 	logger := log.GetLogrus(props)
 	logger.Info("Starting...")
 
+	stopHttp := make(chan os.Signal, 1)
+	signal.Notify(stopHttp, os.Interrupt)
+
 	r := registry.NewRegistry(logger)
 	endpoint := api.NewHttpEndpoint(r, logger, cfg.ListenAddr)
 	go func() {
@@ -28,7 +34,9 @@ func main() {
 	}()
 	//go runTelegram(cfg.TgBotKey, logger, r)
 
-	time.Sleep(time.Second * 99999999)
+	<-stopHttp
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	endpoint.Shutdown(ctx)
 }
 
 func runTelegram(key string, logger log.Logger, registry *registry.Registry) {

@@ -36,12 +36,12 @@ func (h *HttpEndpoint) Serve() error {
 
 func (h *HttpEndpoint) Shutdown(ctx context.Context) error {
 	h.logger.Infoln("Shutting down the server...")
+	defer h.logger.Infoln("Server gracefully stopped")
 	h.endpoint.SetKeepAlivesEnabled(false)
 	err := h.endpoint.Shutdown(ctx)
 	if err != nil {
 		return err
 	}
-	h.logger.Infoln("Server gracefully stopped")
 
 	return err
 }
