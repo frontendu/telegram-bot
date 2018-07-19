@@ -7,6 +7,8 @@ import (
 	"github.com/frontendu/telegram-bot/services/core/pkg/logger"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
 	"net"
+	"regexp"
+	"strings"
 )
 
 type handlers struct {
@@ -38,13 +40,44 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	//httpError = fmt.Sprintf("command %s is already registered", command)
-	//h.logger.Warnln(httpError)
-	//resReq := registry.RegistrationResponse{
-	//	Message: httpError,
-	//	Status:  false,
-	//}
-	//writeError(res, resReq)
+	if _, ok := h.registry.Subscribers[regReq.BotName]; ok {
+		httpError = fmt.Sprintf("Bot %s is already registered", regReq.BotName)
+		h.logger.Warnln(httpError)
+		resReq = registry.RegistrationResponse{
+			Message: httpError,
+			Status:  false,
+		}
+		writeError(res, resReq)
+		return
+	}
+
+	if command, ok := registry.CheckCommand(regReq.Commands, h.registry.Subscribers); !ok {
+		httpError = fmt.Sprintf("command %s is already registered", command)
+		h.logger.Warnln(httpError)
+		resReq := registry.RegistrationResponse{
+			Message: httpError,
+			Status:  false,
+		}
+		writeError(res, resReq)
+		return
+	}
+
+	var badCommands []string
+	regExpCommand := regexp.MustCompile("^[a-zA-Z0-9_.-]*$")
+	for _, command := range regReq.Commands {
+		if !regExpCommand.MatchString(command) {
+			badCommands = append(badCommands, command)
+		}
+	}
+	if len(badCommands) > 0 {
+		httpError = fmt.Sprintf("bad commands format: " + strings.Join(badCommands, " "))
+		resReq := registry.RegistrationResponse{
+			Message: httpError,
+			Status:  false,
+		}
+		writeError(res, resReq)
+		return
+	}
 
 	if err := validateIp(regReq.ListenAddr); err != nil {
 		httpError = "incorrect ip address"
@@ -60,20 +93,31 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 	if err := h.registry.RegisterCommands(regReq); err != nil {
 		h.logger.Warnln(err)
 		resReq = registry.RegistrationResponse{
-			Message: "bad command format",
+			Message: err.Error(),
 			Status:  false,
 		}
 		writeError(res, resReq)
 		return
 	}
 
-	fmt.Println()
+	resReq = registry.RegistrationResponse{
+		Message: "bot registered",
+		Status:  true,
+	}
+
+	writeOk(res, resReq)
 }
 
 func writeError(res http.ResponseWriter, resReq registry.RegistrationResponse) {
 	b, _ := json.Marshal(resReq)
 	res.Header().Set("Content-type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
+	res.Write(b)
+}
+
+func writeOk(res http.ResponseWriter, resReq registry.RegistrationResponse) {
+	b, _ := json.Marshal(resReq)
+	res.Header().Set("Content-type", "application/json")
 	res.Write(b)
 }
 
