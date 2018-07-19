@@ -4,7 +4,7 @@ import (
 	"github.com/frontendu/telegram-bot/services/core/pkg/logger"
 	"net"
 	"gopkg.in/telegram-bot-api.v4"
-	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type Registry struct {
@@ -29,21 +29,18 @@ func NewRegistry(logger logger.Logger) *Registry {
 // Send payload to the service
 func (r *Registry) Process(command string, bot *tgbotapi.BotAPI, payload *tgbotapi.Update) error {
 
+
 	return nil
 }
 
 func (r *Registry) RegisterCommands(payload RegistrationCommandsRequest) error {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", payload.ListenAddr)
-	if err != nil {
-		return errors.Wrap(err, "cannot parse tcp addr: "+payload.ListenAddr)
-	}
-	
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", payload.ListenAddr)
 	r.Subscribers[payload.BotName] = &SubscriberMeta{
 		addr:     tcpAddr,
 		commands: payload.Commands,
 	}
 
-	r.logger.Infof("Bot %s has been registered", payload.BotName)
+	r.logger.WithFields(logrus.Fields{"payload": payload}).Infof("Bot %s has been registered", payload.BotName)
 
 	return nil
 }

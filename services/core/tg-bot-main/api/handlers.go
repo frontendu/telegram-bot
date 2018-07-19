@@ -41,7 +41,7 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 	}
 
 	if _, ok := h.registry.Subscribers[regReq.BotName]; ok {
-		httpError = fmt.Sprintf("Bot %s is already registered", regReq.BotName)
+		httpError = fmt.Sprintf("bot %s is already registered", regReq.BotName)
 		h.logger.Warnln(httpError)
 		resReq = registry.RegistrationResponse{
 			Message: httpError,
