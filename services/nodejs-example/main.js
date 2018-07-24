@@ -10,8 +10,8 @@ app.use(bodyParser.urlencoded({extended: true})); // support encoded bodies
 const regData = {
     "listen_url": "http://127.0.0.1:5505/tg",
     "bot_name": "pinger",
-    // Commands for listening
     "get_all_messages": true,
+    // Commands for listening
     "commands": [
         "ping",
     ]
@@ -34,10 +34,10 @@ request.post({
 
 // Replies
 function NewMessage(payload) {
-    const command = payload.message.text ? payload.message.text : "Привет";
-    console.log(payload);
+    const command = payload.update.message.text ? payload.update.message.text : "Привет";
+    console.log(payload.update);
     let message = {
-        "chat_id": payload.message.chat.id,
+        "chat_id": payload.update.message.chat.id,
         // "reply_to_message_id": payload.message.message_id,
         "text": command,
     };
@@ -56,7 +56,6 @@ function NewMessage(payload) {
         console.log("body " + body)
     })
 }
-
 // End replies
 
 app.post('/tg', (req, res) => {

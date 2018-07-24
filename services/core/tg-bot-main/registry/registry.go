@@ -38,18 +38,23 @@ func NewRegistry(logger logger.Logger) *Registry {
 
 // Send payload to the service
 func (r *Registry) Process(command string, bot *tgbotapi.BotAPI, payload *tgbotapi.Update) error {
-	// @TODO: Refactor
-	r.Bot = bot
+	r.setBot(bot)
 	meta, err := r.multiplexer(command)
 	if err != nil {
 		return err
 	}
 
-	res, err := json.Marshal(payload)
+	botRes := BotResponse{
+		Update:    payload,
+		IsCommand: true,
+	}
+
+	res, err := json.Marshal(botRes)
 	if err != nil {
 		r.logger.Debugf("Cannot unmarshal payload %v", payload)
 		return err
 	}
+
 	_, err = http.Post(meta.endpoint.String(), "application/json", bytes.NewReader(res))
 	if err != nil {
 		return err
@@ -61,8 +66,13 @@ func (r *Registry) Process(command string, bot *tgbotapi.BotAPI, payload *tgbota
 }
 
 func (r *Registry) Stream(bot *tgbotapi.BotAPI, payload *tgbotapi.Update) error {
+	r.setBot(bot)
 	subsForAllMessages := r.findStreamSubscribers()
-	res, err := json.Marshal(payload)
+	botRes := BotResponse{
+		Update:    payload,
+		IsCommand: false,
+	}
+	res, err := json.Marshal(botRes)
 	if err != nil {
 		r.logger.Debugf("Cannot unmarshal payload %v", payload)
 		return err
@@ -78,6 +88,10 @@ func (r *Registry) Stream(bot *tgbotapi.BotAPI, payload *tgbotapi.Update) error 
 	}
 
 	return err
+}
+
+func (r *Registry) setBot(bot *tgbotapi.BotAPI) {
+	r.Bot = bot
 }
 
 func (r *Registry) findStreamSubscribers() []*SubscriberMeta {
