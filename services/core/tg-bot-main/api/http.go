@@ -53,6 +53,7 @@ func registerRoutes(resolver *pathResolver, registry *registry.Registry) {
 	}
 	resolver.AddIndex(h.indexHandler)
 	resolver.Add("POST /register", h.registerCommandsHandler)
+	resolver.Add("POST /commands/sendMessage", h.handleTgMessage)
 }
 
 type pathResolver struct {

@@ -32,7 +32,7 @@ func main() {
 			logger.Fatalf("failed to serve http: %s", err.Error())
 		}
 	}()
-	//go runTelegram(cfg.TgBotKey, logger, r)
+	go runTelegram(cfg.TgBotKey, logger, r)
 
 	<-stopHttp
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -63,9 +63,17 @@ func runTelegram(key string, logger log.Logger, registry *registry.Registry) {
 		if msg.IsCommand() {
 			logger.Debugf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 			command := msg.Command()
-			if err := registry.Process(command, bot, &update); err != nil {
-				logger.Warn(err)
-			}
+			go func() {
+				if err := registry.Process(command, bot, &update); err != nil {
+					logger.Warn(err)
+				}
+			}()
+		} else {
+			go func() {
+				if err := registry.Stream(bot, &update); err != nil {
+					logger.Warnln(err)
+				}
+			}()
 		}
 	}
 }

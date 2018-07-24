@@ -1,9 +1,10 @@
 package registry
 
 type RegistrationCommandsRequest struct {
-	ListenAddr string   `json:"listen_addr"`
-	BotName    string   `json:"bot_name"`
-	Commands   []string `json:"commands"`
+	ListenUrl      string   `json:"listen_url"`
+	BotName        string   `json:"bot_name"`
+	GetAllMessages bool     `json:"get_all_messages"`
+	Commands       []string `json:"commands"`
 }
 
 type RegistrationAllRequest struct {

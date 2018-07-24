@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"github.com/frontendu/telegram-bot/services/core/pkg/logger"
 	"github.com/frontendu/telegram-bot/services/core/tg-bot-main/registry"
-	"net"
 	"regexp"
 	"strings"
+	"net/url"
+	"io/ioutil"
+	"gopkg.in/telegram-bot-api.v4"
 )
 
 type handlers struct {
@@ -33,7 +35,7 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 		httpError = "cannot decode json"
 		h.logger.WithError(err).Warnln(httpError)
 		resReq = registry.RegistrationResponse{
-			Message: "cannot decode json",
+			Message: httpError,
 			Status:  false,
 		}
 		writeError(res, resReq)
@@ -79,7 +81,7 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	if err := validateIp(regReq.ListenAddr); err != nil {
+	if err := validateIp(regReq.ListenUrl); err != nil {
 		httpError = "incorrect ip address"
 		h.logger.WithError(err).Warnln(httpError)
 		resReq = registry.RegistrationResponse{
@@ -108,6 +110,44 @@ func (h *handlers) registerCommandsHandler(res http.ResponseWriter, req *http.Re
 	writeOk(res, resReq)
 }
 
+func (h *handlers) handleTgMessage(res http.ResponseWriter, req *http.Request) {
+	var httpError string
+	var resReq registry.RegistrationResponse
+	var message tgMessage
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		httpError = "cannot read request"
+		h.logger.WithError(err).Warnln(httpError)
+		resReq = registry.RegistrationResponse{
+			Message: httpError,
+			Status:  false,
+		}
+		writeError(res, resReq)
+		return
+	}
+	defer req.Body.Close()
+	if err := json.Unmarshal(b, &message); err != nil {
+		httpError = "cannot decode json"
+		h.logger.WithError(err).Warnln(httpError)
+		resReq = registry.RegistrationResponse{
+			Message: httpError,
+			Status:  false,
+		}
+		writeError(res, resReq)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+	if message.ReplyToMessageID != 0 {
+		msg.ReplyToMessageID = message.ReplyToMessageID
+	}
+	h.registry.Bot.Send(msg)
+	writeOk(res, registry.RegistrationResponse{
+		Message: "Command sent",
+		Status:  true,
+	})
+}
+
 func writeError(res http.ResponseWriter, resReq registry.RegistrationResponse) {
 	b, _ := json.Marshal(resReq)
 	res.Header().Set("Content-type", "application/json")
@@ -122,10 +162,16 @@ func writeOk(res http.ResponseWriter, resReq registry.RegistrationResponse) {
 }
 
 func validateIp(addr string) (error) {
-	_, err := net.ResolveTCPAddr("tcp", addr)
+	_, err := url.Parse(addr)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+type tgMessage struct {
+	ChatID           int64  `json:"chat_id"`
+	ReplyToMessageID int    `json:"reply_to_message_id"`
+	Text             string `json:"text"`
 }
