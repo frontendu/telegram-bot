@@ -1,4 +1,4 @@
-package bots
+package st.youknow.bots
 
 import com.bot4s.telegram.api.{RequestHandler, TelegramBot}
 import com.bot4s.telegram.clients.SttpClient
