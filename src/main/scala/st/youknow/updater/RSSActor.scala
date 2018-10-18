@@ -1,7 +1,7 @@
 package st.youknow.updater
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import com.softwaremill.sttp.{HttpURLConnectionBackend, Id, SttpBackend, UriInterpolator, sttp}
 
 import scala.concurrent.ExecutionContextExecutor
@@ -23,8 +23,13 @@ class RSSActor(botActor: ActorRef) extends Actor {
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   private val soundCloudRSS = "feeds.soundcloud.com/users/soundcloud:users:306631331/sounds.rss"
 
-  context.system.scheduler.schedule(0.second, 1.minute) {
+  val timer: Cancellable = context.system.scheduler.schedule(0.second, 1.minute) {
     self ! NotUsed
+  }
+
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    super.preRestart(reason, message)
+    timer.cancel()
   }
 
   override def receive: Receive = {
@@ -50,20 +55,25 @@ class RSSActor(botActor: ActorRef) extends Actor {
       botActor ! TGResponse(template)
   }
 
-  def parseSummary(text: String): (String, String) = {
-    val filteredText = text.stripMargin.split('\n').filterNot(_.trim.isEmpty)
-    val summary = filteredText.filterNot(_.indexOf("http") > 0).mkString("\n")
-    val links = filteredText.filter(_.indexOf("http") > 0).map { x =>
-      val splitPos = x.indexOf("http")
-      if (splitPos > 0) {
-        val link = x.splitAt(splitPos - 1).productIterator.toList.map(_.toString.trim)
-        s"[${link.head}](${link.last})"
-      }
-      else x
-    }.mkString("\n")
 
-    (summary, links)
+
+  def parseSummary(text: String): (String, String) = {
+    val (links, texts) = text.split("\n").view
+      .map(_.trim.replaceAll("""\s{2,}""", " "))
+      .filterNot(_.isEmpty)
+      .foldLeft(List.empty[String] -> List.empty[String]) {
+        // todo use regexp
+        case ((ls, ts), line) if line.contains("http") => (renderLink(line) +: ls) -> ts
+        case ((ls, ts), line) => ls -> (line +: ts)
+      }
+
+    (texts.reverse.mkString("\n"), links.reverse.mkString("\n"))
   }
 
-  def parseTitle(text: String): String = text.replace("#", "")
+  private def renderLink(str: String): String = {
+    val (desc, link) = str.splitAt(str.indexOf("http")) // todo: use regexp
+    s"[${desc.trim}]($link)"
+  }
+
+  private def parseTitle(text: String): String = text.replace("#", "")
 }
