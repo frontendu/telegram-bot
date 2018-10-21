@@ -7,8 +7,6 @@ trait Builder extends Parser {
     s"""
        |*${parseTitle(podcast.title)}*
        |
-       |[Слушать подкаст](${podcast.link})
-       |
        |${podcast.summary}
          """.stripMargin
   }

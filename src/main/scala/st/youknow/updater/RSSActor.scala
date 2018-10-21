@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import com.softwaremill.sttp.{HttpURLConnectionBackend, Id, SttpBackend, UriInterpolator, sttp}
 import slogging.StrictLogging
-import st.youknow.{Builder, Parser}
+import st.youknow.{Builder, Parser, Markup}
 import st.youknow.updater.RSSActor.{PodcastEntry, PodcastMeta, Podcasts, TGResponse}
 
 import scala.concurrent.ExecutionContextExecutor
@@ -17,7 +17,7 @@ object RSSActor {
   case class PodcastMeta(logoUrl: String)
 }
 
-class RSSActor(podcastActor: ActorRef) extends Actor with Parser with Builder with StrictLogging {
+class RSSActor(podcastActor: ActorRef) extends Actor with Parser with Builder with Markup with StrictLogging {
   implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   private var rssCache = Seq.empty[PodcastEntry]

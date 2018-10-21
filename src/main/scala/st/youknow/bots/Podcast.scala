@@ -8,8 +8,8 @@ import com.bot4s.telegram.clients.ScalajHttpClient
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.models.{InlineQueryResultArticle, InputTextMessageContent}
 import slogging.StrictLogging
-import st.youknow.{Builder, Parser}
 import st.youknow.updater.RSSActor.{PodcastEntry, PodcastMeta, Podcasts, TGResponse}
+import st.youknow.{Builder, Markup, Parser}
 
 import scala.util.Try
 
@@ -20,7 +20,7 @@ object Podcast {
   }
 }
 
-class Podcast(override val token: String) extends AbstractBot(token: String) with Parser with Builder with Actor
+class Podcast(override val token: String) extends AbstractBot(token: String) with Parser with Builder with Markup with Actor
   with Polling
   with Commands with InlineQueries
   with StrictLogging {
@@ -35,7 +35,9 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
   }
 
   onCommand("get_last_podcast") { implicit msg =>
-    replyMd(maybePodcast.getOrElse("Ты настолько быстр, что я не успел получить RSS!"))
+    replyMd(
+      maybePodcast.getOrElse("Ты настолько быстр, что я не успел получить RSS!"),
+      replyMarkup = listenButton(podcasts.head.link))
   }
 
   onInlineQuery { implicit iq =>
@@ -55,6 +57,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
           inputMessageContent = InputTextMessageContent(build(x), disableWebPagePreview = true, parseMode = ParseMode.Markdown),
           thumbUrl = podcastMeta.logoUrl,
           description = matchLocation(foundInBody),
+          replyMarkup = listenButton(x.link)
         )
       })
 
