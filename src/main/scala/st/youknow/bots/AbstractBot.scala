@@ -17,7 +17,7 @@ import slogging.{LogLevel, LoggerConfig, PrintLoggerFactory}
 abstract class AbstractBot(val token: String) extends TelegramBot {
   LoggerConfig.factory = PrintLoggerFactory()
   // set log level, e.g. to TRACE
-  LoggerConfig.level = LogLevel.TRACE
+  LoggerConfig.level = LogLevel.INFO
 
   implicit val backend = OkHttpFutureBackend()
   override val client: RequestHandler = new SttpClient(token)

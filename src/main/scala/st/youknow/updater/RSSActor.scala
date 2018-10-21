@@ -1,79 +1,59 @@
 package st.youknow.updater
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Cancellable, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import com.softwaremill.sttp.{HttpURLConnectionBackend, Id, SttpBackend, UriInterpolator, sttp}
+import slogging.StrictLogging
+import st.youknow.{Builder, Parser}
+import st.youknow.updater.RSSActor.{PodcastEntry, PodcastMeta, Podcasts, TGResponse}
 
 import scala.concurrent.ExecutionContextExecutor
-import st.youknow.updater.RSSActor.{LastPodcast, TGResponse}
-
-import scala.concurrent.duration._
 
 object RSSActor {
   def apply(botActor: ActorRef): Props = Props(classOf[RSSActor], botActor)
-
-  case class LastPodcast(title: String, pubDate: String, link: String, summary: String)
-
+  case class PodcastEntry(title: String, pubDate: String, link: String, summary: String)
   case class TGResponse(text: String)
-
+  case class Podcasts(podcasts: Seq[PodcastEntry], meta: PodcastMeta)
+  case class PodcastMeta(logoUrl: String)
 }
 
-class RSSActor(botActor: ActorRef) extends Actor {
+class RSSActor(podcastActor: ActorRef) extends Actor with Parser with Builder with StrictLogging {
   implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
   implicit val ec: ExecutionContextExecutor = context.dispatcher
+  private var rssCache = Seq.empty[PodcastEntry]
+  // @TODO
+  private var meta = PodcastMeta("")
   private val soundCloudRSS = "feeds.soundcloud.com/users/soundcloud:users:306631331/sounds.rss"
-
-  val timer: Cancellable = context.system.scheduler.schedule(0.second, 1.minute) {
-    self ! NotUsed
+  private val timer = new java.util.Timer()
+  private val updateRSS = new java.util.TimerTask {
+    override def run(): Unit = fetchFeed()
   }
+  timer.schedule(updateRSS, 0, 60000 * 10000)
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     super.preRestart(reason, message)
-    timer.cancel()
+    updateRSS.cancel()
+  }
+
+  def fetchFeed(): Unit = {
+    import scala.xml.XML
+    val rss = sttp.get(UriInterpolator.interpolate(StringContext(soundCloudRSS))).send()
+    // @TODO: Handle exception
+    val xmlRSS = XML.loadString(rss.body.right.get)
+    rssCache = (xmlRSS \ "channel" \ "item").map(x => {
+      val (text, links) = parse((x \ "summary").text)
+      PodcastEntry((x \ "title").text, (x \ "pubDate").text, (x \ "link").text, text + "\n\n" + links)
+    })
+    meta = PodcastMeta((xmlRSS \ "channel" \ "image" \ "url").text)
+    self ! NotUsed
+    logger.info("cache updated")
   }
 
   override def receive: Receive = {
     case NotUsed =>
-      val rss = sttp.get(UriInterpolator.interpolate(StringContext(soundCloudRSS))).send()
-      // @TODO: Handle exception
-
-      val xml = (scala.xml.XML.loadString(rss.body.right.get) \ "channel" \ "item").head
-      val entry = LastPodcast((xml \ "title").text, (xml \ "pubDate").text, (xml \ "link").text, (xml \ "summary").text)
-
-      val parsedSummary = parseSummary(entry.summary)
-      val template =
-        s"""
-           |*${parseTitle(entry.title)}*
-           |
-           |[Слушать подкаст](${entry.link})
-           |
-           |${parsedSummary._1}
-           |
-           |${parsedSummary._2}
-         """.stripMargin
-
-      botActor ! TGResponse(template)
+      logger.info("sent template to podcast actor")
+      // @TODO Send only when changed
+      podcastActor ! TGResponse(build(rssCache.head))
+      podcastActor ! Podcasts(rssCache, meta)
   }
-
-
-
-  def parseSummary(text: String): (String, String) = {
-    val (links, texts) = text.split("\n").view
-      .map(_.trim.replaceAll("""\s{2,}""", " "))
-      .filterNot(_.isEmpty)
-      .foldLeft(List.empty[String] -> List.empty[String]) {
-        // todo use regexp
-        case ((ls, ts), line) if line.contains("http") => (renderLink(line) +: ls) -> ts
-        case ((ls, ts), line) => ls -> (line +: ts)
-      }
-
-    (texts.reverse.mkString("\n"), links.reverse.mkString("\n"))
-  }
-
-  private def renderLink(str: String): String = {
-    val (desc, link) = str.splitAt(str.indexOf("http")) // todo: use regexp
-    s"[${desc.trim}]($link)"
-  }
-
-  private def parseTitle(text: String): String = text.replace("#", "")
 }
