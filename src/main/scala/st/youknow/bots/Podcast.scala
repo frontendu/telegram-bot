@@ -61,6 +61,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
         )
       })
 
+      logger.info("matches quantity: " + matchedPodcasts.length + " for word " + query)
       answerInlineQuery(matchedPodcasts, cacheTime = 1)
     }
   }
