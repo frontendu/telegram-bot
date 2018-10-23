@@ -8,7 +8,7 @@ import com.bot4s.telegram.clients.ScalajHttpClient
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.models.{InlineQueryResultArticle, InputTextMessageContent}
 import slogging.StrictLogging
-import st.youknow.updater.RSSActor.{PodcastEntry, PodcastMeta, Podcasts, TGResponse}
+import st.youknow.updater.RSSActor._
 import st.youknow.{Builder, Markup, Parser}
 
 import scala.util.Try
@@ -26,8 +26,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
   with StrictLogging {
   override val client = new ScalajHttpClient(token)
   private var maybePodcast: Option[String] = None
-  private var podcasts = Seq.empty[PodcastEntry]
-  private var podcastMeta = PodcastMeta("")
+  private var podcasts = PodcastsPayload(Seq.empty[PodcastEntry], PodcastMeta())
 
   override def preStart: Unit = {
     super.preStart()
@@ -37,7 +36,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
   onCommand("get_last_podcast") { implicit msg =>
     replyMd(
       maybePodcast.getOrElse("Ты настолько быстр, что я не успел получить RSS!"),
-      replyMarkup = listenButton(podcasts.head.link))
+      replyMarkup = listenButton(podcasts.podcasts.head.link))
   }
 
   onInlineQuery { implicit iq =>
@@ -48,14 +47,15 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
     else {
       val queryLower = query.toLowerCase
       val foundInBody = false
-      val matchedPodcasts = podcasts.filter(x => {
+      val (extractedPodcasts, meta) = getPodcasts(podcasts)
+      val matchedPodcasts = extractedPodcasts.filter(x => {
         x.title.toLowerCase.contains(queryLower) || x.summary.toLowerCase.contains(queryLower)
       }).map(x => {
         InlineQueryResultArticle(
           query + "@" + x.link,
           title = x.title,
           inputMessageContent = InputTextMessageContent(build(x), disableWebPagePreview = true, parseMode = ParseMode.Markdown),
-          thumbUrl = podcastMeta.logoUrl,
+          thumbUrl = meta.logoUrl,
           description = matchLocation(foundInBody),
           replyMarkup = listenButton(x.link)
         )
@@ -66,16 +66,13 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
     }
   }
 
+  def getPodcasts(p: PodcastsPayload): (Seq[PodcastEntry], PodcastMeta) = p.podcasts -> p.meta
   def matchLocation(foundInBody: Boolean): Option[String] = if (!foundInBody) Some("Найдено в заголовке") else Some("Найдено в описании")
 
   override def receive: Receive = {
-    case TGResponse(text) =>
-      logger.info("received template from rss actor")
-      maybePodcast = Some(text)
-    case Podcasts(rssFeed, meta) =>
-      logger.info("received full rss feed")
-      podcasts = rssFeed
-      podcastMeta = meta
+    case PodcastsPayload(rssFeed, meta) =>
+      podcasts = PodcastsPayload(rssFeed, meta)
+      maybePodcast = Some(build(rssFeed.head))
   }
 
   /* Int(n) extractor */
