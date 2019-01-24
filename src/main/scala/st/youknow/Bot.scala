@@ -1,7 +1,7 @@
 package st.youknow
 
 import akka.actor.ActorSystem
-import st.youknow.bots.Podcast
+import st.youknow.bots.{Podcast}
 import st.youknow.updater.RSSActor
 import scala.util.Properties.envOrNone
 

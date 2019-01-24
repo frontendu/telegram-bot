@@ -1,11 +1,14 @@
 package st.youknow.bots
 
+import java.math.BigInteger
+import java.security.MessageDigest
+
 import akka.actor.{Actor, Props}
 import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.api.Polling
 import com.bot4s.telegram.api.declarative.{Commands, InlineQueries}
 import com.bot4s.telegram.clients.ScalajHttpClient
-import com.bot4s.telegram.methods.ParseMode
+import com.bot4s.telegram.methods.{ParseMode, PinChatMessage, SendMessage}
 import com.bot4s.telegram.models.{InlineQueryResultArticle, InputTextMessageContent}
 import slogging.StrictLogging
 import st.youknow.updater.RSSActor._
@@ -25,6 +28,8 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
   with Commands with InlineQueries
   with StrictLogging {
   override val client = new ScalajHttpClient(token)
+  private val youAreSoFast = "Ты настолько быстр, что я не успел получить RSS!"
+  private val announceGroupId = "-1001134192058"
   private var maybePodcast: Option[String] = None
   private var podcasts = PodcastsPayload(Seq.empty[PodcastEntry], PodcastMeta())
 
@@ -35,7 +40,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
 
   onCommand("get_last_podcast") { implicit msg =>
     replyMd(
-      maybePodcast.getOrElse("Ты настолько быстр, что я не успел получить RSS!"),
+      maybePodcast.getOrElse(youAreSoFast),
       replyMarkup = listenButton(podcasts.podcasts.head.link))
   }
 
@@ -73,7 +78,15 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
     case PodcastsPayload(rssFeed, meta) =>
       podcasts = PodcastsPayload(rssFeed, meta)
       maybePodcast = Some(build(rssFeed.head))
+
+      var podcastHash = ""
+      val h = hash(rssFeed.head.title)
+      if (podcastHash.isEmpty) podcastHash = h
+      if (podcastHash != h) request(SendMessage(announceGroupId, maybePodcast.getOrElse(youAreSoFast), ParseMode.Markdown)) foreach {f => request(PinChatMessage(f.chat.id, f.messageId)) }
+      else podcastHash = h
   }
+
+  def hash(s: String): String = new BigInteger(1, MessageDigest.getInstance("MD5").digest(s.getBytes())).toString(16)
 
   /* Int(n) extractor */
   object Int {
