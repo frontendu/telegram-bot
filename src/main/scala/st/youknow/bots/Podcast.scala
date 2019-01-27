@@ -28,6 +28,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
   with Commands with InlineQueries
   with StrictLogging {
   override val client = new ScalajHttpClient(token)
+  private var podcastHash = ""
   private val youAreSoFast = "Ты настолько быстр, что я не успел получить RSS!"
   private val announceGroupId = "-1001134192058"
   private var maybePodcast: Option[String] = None
@@ -79,10 +80,9 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
       podcasts = PodcastsPayload(rssFeed, meta)
       maybePodcast = Some(build(rssFeed.head))
 
-      var podcastHash = ""
       val h = hash(rssFeed.head.title)
       if (podcastHash.isEmpty) podcastHash = h
-      if (podcastHash != h) request(SendMessage(announceGroupId, maybePodcast.getOrElse(youAreSoFast), ParseMode.Markdown)) foreach {f => request(PinChatMessage(f.chat.id, f.messageId)) }
+      if (podcastHash != h) request(SendMessage(announceGroupId, maybePodcast.getOrElse(youAreSoFast), ParseMode.Markdown)) foreach { f => request(PinChatMessage(f.chat.id, f.messageId)) }
       else podcastHash = h
   }
 
