@@ -85,7 +85,7 @@ class Podcast(override val token: String) extends AbstractBot(token: String) wit
       if (podcastHash != h)
         request(SendMessage(announceGroupId, maybePodcast.getOrElse(youAreSoFast), ParseMode.Markdown,
           replyMarkup = listenButton(podcasts.podcasts.head.link))) foreach { f => request(PinChatMessage(f.chat.id, f.messageId)) }
-      else podcastHash = h
+      podcastHash = h
   }
 
   def hash(s: String): String = new BigInteger(1, MessageDigest.getInstance("MD5").digest(s.getBytes())).toString(16)
