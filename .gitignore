@@ -11,3 +11,5 @@ project/plugins/project/
 build
 .gradle
 .DS_Store
+gradle/wrapper/gradle-wrapper.jar
+last_podcast_number.txt
