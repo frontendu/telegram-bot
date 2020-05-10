@@ -1,25 +1,29 @@
 package services.soundcloud
 
-import com.github.kotlintelegrambot.Bot
-import com.github.kotlintelegrambot.entities.*
+import com.github.kotlintelegrambot.entities.ParseMode
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import services.telegram.Telegram
 import services.xml.Parser
 import java.io.File
 import java.io.FileNotFoundException
 import kotlin.concurrent.fixedRateTimer
 
-class SoundCloudWatcher(private val soundCloudRSS: String, private val bot: Bot) {
-    private val chatID = -1001312727708
+data class NewPodcastMessage(
+    val body: Podcast,
+    val parseMode: ParseMode
+)
+
+class SoundCloudWatcher(private val soundCloudRSS: String) {
     private val logger = KotlinLogging.logger {}
     private val httpClient = HttpClient()
-
     private val scheduleRSSIntervalMs = 1000 * 60L
     private val lastPodcastFilename = "last_podcast_number.txt"
     private val lastPodcastFile = File(lastPodcastFilename)
+
+    val ch = Channel<NewPodcastMessage>()
 
     fun watch() {
         fixedRateTimer("rss updater", true, 0, scheduleRSSIntervalMs) {
@@ -33,27 +37,10 @@ class SoundCloudWatcher(private val soundCloudRSS: String, private val bot: Bot)
 
                 lastPodcast?.run {
                     if (lastPodcast.getPodcastNumber() > currentPodcastNumber) {
-                        val (result, exception) = bot.sendMessage(
-                            chatId = chatID,
-                            text = Telegram.buildMessage(lastPodcast),
-                            parseMode = ParseMode.HTML,
-                            replyMarkup = Telegram.buildListenButton(lastPodcast.link)
-                        )
-
-                        if (exception != null) {
-                            logger.error { "cannot send podcast message: $exception.message" }
-                            return@runBlocking
-                        }
-
-                        val messageID = result?.body()?.result?.messageId
-                            ?: run {
-                                logger.error { "cannot get message id: result is null" }
-                                return@runBlocking
-                            }
-
-                        bot.pinChatMessage(chatId = chatID, messageId = messageID)
+                        ch.send(NewPodcastMessage(body = lastPodcast, parseMode = ParseMode.HTML))
                         lastPodcastFile.writeText(lastPodcast.getPodcastNumber().toString())
                     }
+
                 } ?: logger.error { "soundcloud rss is empty" }
             }
         }

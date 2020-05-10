@@ -4,7 +4,7 @@ import com.github.kotlintelegrambot.entities.InlineKeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import services.soundcloud.Podcast
 
-object Telegram {
+object Message {
     private const val listenPodcastButton = "\ud83c\udfa7 Слушать подкаст \ud83c\udfa7"
     private var trombones = "${"\uD83C\uDF89".repeat(3)} Новый выпуск! 🥂"
     private val timeCodeRegexp = "^([0-9]+(:[0-9]?).(:[0-9]+)?)".toRegex()
