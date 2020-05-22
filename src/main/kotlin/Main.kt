@@ -23,7 +23,7 @@ fun main() = runBlocking {
     val bot = bot {
         token =
             System.getenv("FU_TG_BOT_KEY")
-                ?: throw IllegalStateException("env tg bot key FU_TG_BOT_KEY not provided")
+                ?: throw IllegalStateException("env tg bot key FU_TG_BOT_KEY is not provided")
         timeout = 5
         logLevel = HttpLoggingInterceptor.Level.NONE
         dispatch {

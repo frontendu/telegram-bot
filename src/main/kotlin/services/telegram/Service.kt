@@ -20,7 +20,7 @@ class Service(
     }
 
     private val logger = KotlinLogging.logger {}
-    private val chatID = -1001312727708
+    private val chatID = -1001134192058
 
     fun runPodcastSender() = runBlocking {
         while (true) {
