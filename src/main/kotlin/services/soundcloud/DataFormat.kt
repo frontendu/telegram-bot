@@ -2,7 +2,7 @@ package services.soundcloud
 
 import com.fasterxml.jackson.annotation.JsonRootName
 
-data class Message(val channel: Podcasts)
+data class AllPodcasts(val channel: Podcasts)
 
 @JsonRootName("channel")
 data class Podcasts(val item: List<Podcast>)
@@ -10,6 +10,6 @@ data class Podcasts(val item: List<Podcast>)
 @JsonRootName("item")
 data class Podcast(val title: String, val link: String, val description: String)
 
-fun Message.getLastPodcast(): Podcast = this.channel.item.first()
+fun AllPodcasts.getLastPodcast(): Podcast = this.channel.item.first()
 
-fun Podcast.getPodcastNumber(): Int = this.title.filter { it.isDigit() }.toInt()
+fun PodcastMessage.getPodcastNumber(): Int = this.body.title.filter { it.isDigit() }.toInt()

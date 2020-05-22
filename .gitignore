@@ -7,9 +7,7 @@ project/plugins/project/
 .history
 .cache
 .lib/
-.idea
 build
 .gradle
-.DS_Store
 gradle/wrapper/gradle-wrapper.jar
 last_podcast_number.txt

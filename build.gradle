@@ -5,6 +5,19 @@ plugins {
 group 'st.youknow'
 version '1.0-SNAPSHOT'
 
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin/'
+    test.java.srcDirs += 'src/test/kotlin/'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'MainKt'
+    }
+
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
 repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
