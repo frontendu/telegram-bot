@@ -40,7 +40,7 @@ class Service(
 
             val messageID = result?.body()?.result?.messageId
             if (messageID == null) {
-                logger.error { "cannot get message id: result is null" }
+                logger.error { "cannot get message id: result is null: ${result?.message()}" }
                 statusCh.send(MessageSendResponse(false, "null result from telegram api"))
                 return@runBlocking
             }
