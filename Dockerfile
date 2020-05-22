@@ -11,4 +11,6 @@ COPY --from=build /home/gradle/src/build/libs/telegram-bot-1.0-SNAPSHOT.jar /app
 
 ENV FU_TG_BOT_KEY=$FU_TG_BOT_KEY
 
+EXPOSE 443 80 88 8443
+
 ENTRYPOINT ["java", "-jar","/app/telegram-bot-1.0-SNAPSHOT.jar"]
