@@ -1,6 +1,6 @@
 package services.telegram
 
-import com.github.kotlintelegrambot.entities.InlineKeyboardButton
+import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import services.soundcloud.Podcast
 
@@ -25,7 +25,9 @@ ${if (withLink) "<a href='${message.link}'>$listenPodcastButton</a>" else ""}
     }
 
     fun buildListenButton(URL: String) =
-        InlineKeyboardMarkup.createSingleButton(InlineKeyboardButton(text = listenPodcastButton, url = URL))
+        InlineKeyboardMarkup.createSingleButton(
+            InlineKeyboardButton.Url(text = listenPodcastButton, url = URL)
+        )
 
     private fun prettifyDescription(description: String, URL: String): String {
         val split = description.split("\n\n")

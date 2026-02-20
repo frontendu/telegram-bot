@@ -1,12 +1,12 @@
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.inlineQuery
-import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.dispatcher.text
+import com.github.kotlintelegrambot.logging.LogLevel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import okhttp3.logging.HttpLoggingInterceptor
 import services.soundcloud.PodcastMessage
 import services.soundcloud.SoundCloudWatcher
 import services.telegram.MessageSendResponse
@@ -25,10 +25,14 @@ fun main() = runBlocking {
             System.getenv("FU_TG_BOT_KEY")
                 ?: throw IllegalStateException("env tg bot key FU_TG_BOT_KEY is not provided")
         timeout = 5
-        logLevel = HttpLoggingInterceptor.Level.NONE
+        logLevel = LogLevel.Network.Body
+
         dispatch {
-            inlineQuery { bot, iq ->
-                handleInlineQuery(bot, iq, soundCloudWatcher.allPodcastsTitles)
+            inlineQuery {
+                handleInlineQuery(bot, inlineQuery, soundCloudWatcher.allPodcastsTitles)
+            }
+            text { ->
+                handleMemeQuery(bot, message, text);
             }
         }
     }
